@@ -348,7 +348,14 @@
                 sendBtn.disabled = true;
             }
         }
-
+        function blobToUtf8(blob) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsText(blob, 'UTF-8');
+            });
+        }
         // 添加消息到列表
         function addMessage(content, isSent) {
             // 隐藏空状态
@@ -393,7 +400,7 @@
                 });
 
                 socket.addEventListener('message', (event) => {
-                    addMessage(event.data, false);
+                    event.data.size > 0 ?blobToUtf8(event.data).then(text => addMessage(text, false)):addMessage(event.data, false)
                 });
 
                 socket.addEventListener('close', () => {

@@ -146,7 +146,7 @@ func (co *ConnObj) writeLoop() {
 
 // 写道客户端
 func (co *ConnObj) writeMessage(msg []byte) error {
-	if err := co.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+	if err := co.conn.WriteMessage(websocket.BinaryMessage, msg); err != nil {
 		co.close()
 		return err
 	}
