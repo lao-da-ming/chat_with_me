@@ -91,6 +91,7 @@ func (ws *WsController) Connect(c *gin.Context) {
 	}
 	ConnectPool.Store(uniqueKey, obj)
 	defer obj.close()
+	log.Println("连接建立，标识:", uniqueKey)
 	//统计+1
 	atomic.AddInt32(&curConnCount, 1)
 	//统计-1
