@@ -2,12 +2,12 @@ package api
 
 import "github.com/gin-gonic/gin"
 
-type Index struct {
+type IndexController struct {
 }
 
-func NewIndex() *Index {
-	return &Index{}
+func NewIndexController() *IndexController {
+	return &IndexController{}
 }
-func (i *Index) Home(c *gin.Context) {
+func (i *IndexController) Home(c *gin.Context) {
 	c.JSON(200, gin.H{"message": "hello world"})
 }
