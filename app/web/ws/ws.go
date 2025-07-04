@@ -25,7 +25,7 @@ var (
 	//当前连接数
 	curConnCount int32
 	//最大连接数
-	maxConnCount int32 = 1
+	maxConnCount int32 = 2
 	//心跳时间
 	heartbeatInterval = time.Second * 15
 	//协议升级配置
