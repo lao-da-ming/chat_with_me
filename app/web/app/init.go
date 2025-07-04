@@ -13,7 +13,7 @@ type App struct {
 }
 
 func NewApp(engine *gin.Engine, indexController *api.IndexController, wsController *ws.WsController) *App {
-	engine.GET("/ws", wsController.Connect)
+	engine.GET("/ws/connect", wsController.Connect)
 	engine.GET("/", indexController.Home)
 	return &App{
 		IndexController: indexController,
