@@ -114,8 +114,18 @@ func (co *ConnObj) doTask() {
 			return
 		case msg := <-co.receiveChan:
 			//暂时不处理，发回去
-			co.sendChan <- msg
+			co.WriteToSendChan(msg)
 		}
+	}
+}
+
+// 发送到写出通道
+func (co *ConnObj) WriteToSendChan(msg []byte) {
+	select {
+	case <-co.closeChan:
+	case co.sendChan <- msg:
+	default:
+		co.close()
 	}
 }
 

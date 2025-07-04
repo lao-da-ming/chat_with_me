@@ -14,7 +14,7 @@ type App struct {
 
 func NewApp(engine *gin.Engine, indexController *api.IndexController, wsController *ws.WsController) *App {
 	engine.GET("/ws/connect", wsController.Connect)
-	engine.GET("/", indexController.Home)
+	engine.GET("/:key", indexController.Home)
 	return &App{
 		IndexController: indexController,
 		wsController:    wsController,
