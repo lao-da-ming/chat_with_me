@@ -13,6 +13,10 @@ type App struct {
 }
 
 func NewApp(engine *gin.Engine, indexController *api.IndexController, wsController *ws.WsController) *App {
+	//设置信任的代理
+	if err := engine.SetTrustedProxies([]string{"127.0.0.1"}); err != nil {
+		panic(err)
+	}
 	wsGroup := engine.Group("/ws")
 	{
 		wsGroup.GET("/connect", wsController.Connect)
