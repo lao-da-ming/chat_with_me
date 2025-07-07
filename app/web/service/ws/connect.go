@@ -33,8 +33,8 @@ var (
 	//协议升级配置
 	upgrader = websocket.Upgrader{
 		HandshakeTimeout: time.Second * 20,
-		ReadBufferSize:   2048,
-		WriteBufferSize:  2048,
+		ReadBufferSize:   1024,
+		WriteBufferSize:  1024,
 		WriteBufferPool: &sync.Pool{
 			New: func() interface{} {
 				return new(bytes.Buffer)
