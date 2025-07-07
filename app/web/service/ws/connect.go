@@ -68,10 +68,7 @@ type ConnObj struct {
 
 // 升级协议连接websocket
 func (ws *WsController) Connect(c *gin.Context) {
-	protocol := c.GetHeader("Sec-WebSocket-Protocol")
-	if protocol != "" {
-		c.Writer.Header().Set("Sec-WebSocket-Protocol", strings.Split(c.Request.Header.Get("Sec-WebSocket-Protocol"), ",")[0])
-	}
+	c.Writer.Header().Set("Sec-WebSocket-Protocol", strings.Split(c.Request.Header.Get("Sec-WebSocket-Protocol"), ",")[0])
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, c.Writer.Header())
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"msg": "连接失败" + err.Error()})

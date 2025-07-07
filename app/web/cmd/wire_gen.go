@@ -21,6 +21,6 @@ func WireApp(engine *gin.Engine) *app.App {
 	logger := conf.NewLogger()
 	indexController := api.NewIndexController(logger)
 	wsController := ws.NewWsController(logger)
-	appApp := app.NewApp(engine, indexController, wsController)
+	appApp := app.NewApp(engine, logger, indexController, wsController)
 	return appApp
 }
