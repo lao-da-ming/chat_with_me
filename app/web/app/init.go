@@ -1,8 +1,8 @@
 package app
 
 import (
-	"chat_with_me/app/web/api"
-	"chat_with_me/app/web/ws"
+	"chat_with_me/app/web/service/api"
+	"chat_with_me/app/web/service/ws"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,9 +17,9 @@ func NewApp(engine *gin.Engine, indexController *api.IndexController, wsControll
 	{
 		wsGroup.GET("/connect", wsController.Connect)
 	}
-	apiGroup := wsGroup.Group("/api")
+	apiGroup := engine.Group("/api")
 	{
-		apiGroup.GET("/:key", indexController.Home)
+		apiGroup.GET("/home", indexController.Home)
 	}
 	return &App{
 		IndexController: indexController,

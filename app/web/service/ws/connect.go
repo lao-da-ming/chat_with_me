@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	uuid "github.com/satori/go.uuid"
+	"go.uber.org/zap"
 	"log"
 	"net/http"
 	"strings"
@@ -15,10 +16,11 @@ import (
 )
 
 type WsController struct {
+	Logger *zap.Logger
 }
 
-func NewWsController() *WsController {
-	return &WsController{}
+func NewWsController(Logger *zap.Logger) *WsController {
+	return &WsController{Logger: Logger}
 }
 
 var (
