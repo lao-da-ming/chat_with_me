@@ -1,6 +1,7 @@
 package app
 
 import (
+	"chat_with_me/app/web/middleware"
 	"chat_with_me/app/web/service/api"
 	"chat_with_me/app/web/service/ws"
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,8 @@ func NewApp(engine *gin.Engine, indexController *api.IndexController, wsControll
 	if err := engine.SetTrustedProxies([]string{}); err != nil {
 		panic(err)
 	}
+	//中间件
+	engine.Use(middleware.LogsMiddleware())
 	wsGroup := engine.Group("/ws")
 	{
 		wsGroup.GET("/connect", wsController.Connect)

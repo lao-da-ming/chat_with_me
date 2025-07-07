@@ -13,5 +13,5 @@ func NewIndexController(logger *zap.Logger) *IndexController {
 	return &IndexController{logger: logger}
 }
 func (i *IndexController) Home(c *gin.Context) {
-	c.JSON(200, gin.H{"msg": "OK"})
+	c.JSON(500, gin.H{"msg": "OK"})
 }
