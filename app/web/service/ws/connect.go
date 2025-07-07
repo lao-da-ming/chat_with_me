@@ -112,8 +112,12 @@ func (co *ConnObj) doTask() {
 		case <-co.closeChan:
 			return
 		case msg := <-co.receiveChan:
-			//暂时不处理，发回去
-			co.WriteToSendChan(msg)
+			switch string(msg) {
+			case "时间":
+				co.WriteToSendChan([]byte(time.Now().String()))
+			case "姓名":
+				co.WriteToSendChan([]byte("奥德彪"))
+			}
 		}
 	}
 }
