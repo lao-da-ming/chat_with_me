@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"log"
 	"net/http"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -64,6 +65,8 @@ type ConnObj struct {
 	sendChan chan []byte
 	//单例操作
 	once sync.Once
+	//日志
+	logger *zap.Logger
 }
 
 // 升级协议连接websocket
@@ -87,10 +90,10 @@ func (ws *WsController) Connect(c *gin.Context) {
 		receiveChan: make(chan []byte, 100),
 		sendChan:    make(chan []byte, 100),
 		once:        sync.Once{},
+		logger:      ws.Logger,
 	}
 	ConnectPool.Store(uniqueKey, obj)
 	defer obj.close()
-	defer obj.writeMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close"))
 	log.Println("连接建立，标识:", uniqueKey)
 	//统计+1
 	atomic.AddInt32(&curConnCount, 1)
@@ -108,6 +111,12 @@ func (ws *WsController) Connect(c *gin.Context) {
 
 // 处理消息业务
 func (co *ConnObj) doTask() {
+	defer func() {
+		if err := recover(); err != nil {
+			co.logger.Error("doTask panic:" + string(debug.Stack()))
+			co.close()
+		}
+	}()
 	for {
 		select {
 		case <-co.closeChan:
@@ -135,6 +144,12 @@ func (co *ConnObj) WriteToSendChan(msg []byte) {
 
 // 从缓冲队列取消息发送到客户端
 func (co *ConnObj) writeLoop() {
+	defer func() {
+		if err := recover(); err != nil {
+			co.logger.Error("writeLoop panic:" + string(debug.Stack()))
+			co.close()
+		}
+	}()
 	for {
 		select {
 		case <-co.closeChan:
@@ -159,6 +174,12 @@ func (co *ConnObj) writeMessage(msgType int, msg []byte) error {
 
 // 接收客户端信息写入缓冲队列
 func (co *ConnObj) readLoop() {
+	defer func() {
+		if err := recover(); err != nil {
+			co.logger.Error("readLoop panic:" + string(debug.Stack()))
+			co.close()
+		}
+	}()
 	for {
 		msgType, data, err := co.conn.ReadMessage()
 		if err != nil {
@@ -197,11 +218,11 @@ func (co *ConnObj) readLoop() {
 // 关闭链接
 func (co *ConnObj) close() {
 	co.once.Do(func() {
-		_ = co.conn.WriteMessage(websocket.TextMessage, []byte("服务端关闭连接"))
-		_ = co.conn.Close()
 		close(co.closeChan)
 		close(co.receiveChan)
 		close(co.sendChan)
+		_ = co.writeMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		_ = co.conn.Close()
 		ConnectPool.Delete(co.uniqueId)
 		log.Println("连接关闭")
 	})
