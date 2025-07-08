@@ -7,22 +7,22 @@ import (
 	"time"
 )
 
-var ProviderSet = wire.NewSet(NewData)
+var ProviderSet = wire.NewSet(NewData, NewUserRepo)
 
-func NewData() (*gorm.DB, error) {
-	db, err := gorm.Open(postgres.Open(""), &gorm.Config{
+func NewData() *gorm.DB {
+	db, err := gorm.Open(postgres.Open("postgres://postgres:123456@10.60.33.25:5432/postgres"), &gorm.Config{
 		PrepareStmt: true,
 	})
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	db = db.Debug()
 	sdb, err := db.DB()
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	sdb.SetConnMaxLifetime(30 * time.Minute)
 	sdb.SetMaxIdleConns(50)
 	sdb.SetMaxOpenConns(100)
-	return db, nil
+	return db
 }

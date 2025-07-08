@@ -8,6 +8,7 @@ package cmd
 
 import (
 	"chat_with_me/app/web/app"
+	"chat_with_me/app/web/data"
 	"chat_with_me/app/web/log"
 	"chat_with_me/app/web/service/api"
 	"chat_with_me/app/web/service/ws"
@@ -19,7 +20,9 @@ import (
 // wireApp init kratos application.
 func WireApp(engine *gin.Engine) *app.App {
 	logger := log.NewLogger()
-	indexController := api.NewIndexController(logger)
+	db := data.NewData()
+	userRepo := data.NewUserRepo(db)
+	indexController := api.NewIndexController(logger, userRepo)
 	wsController := ws.NewWsController(logger)
 	appApp := app.NewApp(engine, logger, indexController, wsController)
 	return appApp
