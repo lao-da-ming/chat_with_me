@@ -90,6 +90,7 @@ func (ws *WsController) Connect(c *gin.Context) {
 	}
 	ConnectPool.Store(uniqueKey, obj)
 	defer obj.close()
+	defer obj.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close"))
 	log.Println("连接建立，标识:", uniqueKey)
 	//统计+1
 	atomic.AddInt32(&curConnCount, 1)
