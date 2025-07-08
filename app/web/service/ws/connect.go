@@ -180,6 +180,7 @@ func (co *ConnObj) readLoop() {
 				}
 			case websocket.CloseMessage: //关闭消息
 				log.Println("receive close msg")
+				co.conn.WriteMessage(websocket.CloseMessage, []byte("close"))
 				co.close()
 				return
 			case websocket.PingMessage:
