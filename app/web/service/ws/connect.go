@@ -90,7 +90,7 @@ func (ws *WsController) Connect(c *gin.Context) {
 	}
 	ConnectPool.Store(uniqueKey, obj)
 	defer obj.close()
-	defer obj.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close"))
+	defer obj.writeMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, "close"))
 	log.Println("连接建立，标识:", uniqueKey)
 	//统计+1
 	atomic.AddInt32(&curConnCount, 1)
@@ -140,7 +140,7 @@ func (co *ConnObj) writeLoop() {
 		case <-co.closeChan:
 			return
 		case msg := <-co.sendChan:
-			if err := co.writeMessage(msg); err != nil {
+			if err := co.writeMessage(websocket.TextMessage, msg); err != nil {
 				log.Println("write message err:", err.Error())
 				return
 			}
@@ -149,8 +149,8 @@ func (co *ConnObj) writeLoop() {
 }
 
 // 写道客户端
-func (co *ConnObj) writeMessage(msg []byte) error {
-	if err := co.conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+func (co *ConnObj) writeMessage(msgType int, msg []byte) error {
+	if err := co.conn.WriteMessage(msgType, msg); err != nil {
 		co.close()
 		return err
 	}
