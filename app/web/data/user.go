@@ -22,5 +22,11 @@ func (u *UserRepo) Update(ctx context.Context, id int64, user map[string]any) er
 	return u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id).Updates(user).Error
 }
 func (u *UserRepo) UpdateAttr(ctx context.Context, id int64, key string, val any) error {
+	/*var result string
+	if err := u.db.Model(&entity.User{}).WithContext(ctx).Select("attr->'profile'->>'name' as key").Where("id = ?", id).Scan(&result).Error; err != nil {
+		return err
+	}
+	fmt.Println(result)
+	return nil*/
 	return u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id).Update("attr", datatypes.JSONSet("attr").Set("{"+key+"}", val)).Error
 }
