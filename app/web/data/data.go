@@ -1,10 +1,13 @@
 package data
 
 import (
+	"github.com/google/wire"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"time"
 )
+
+var ProviderSet = wire.NewSet(NewData)
 
 func NewData() (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(""), &gorm.Config{

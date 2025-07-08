@@ -1,10 +1,13 @@
-package conf
+package log
 
 import (
+	"github.com/google/wire"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"os"
 )
+
+var ProviderSet = wire.NewSet(NewLogger)
 
 func NewLogger() *zap.Logger {
 	projectRootDir, err := os.Getwd()
