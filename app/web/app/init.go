@@ -28,6 +28,9 @@ func NewApp(engine *gin.Engine, logger *zap.Logger, indexController *api.IndexCo
 	apiGroup := engine.Group("/api")
 	{
 		apiGroup.GET("/home", indexController.Home)
+		apiGroup.GET("/create", indexController.Create)
+		apiGroup.GET("/update/:id", indexController.Update)
+		apiGroup.GET("/update_attr/:id", indexController.UpdateAttr)
 	}
 	return &App{
 		IndexController: indexController,
