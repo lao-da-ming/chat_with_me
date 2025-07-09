@@ -25,26 +25,26 @@ func (u *UserRepo) Create(ctx context.Context, user *entity.User) error {
 func (u *UserRepo) Update(ctx context.Context, id int64, user map[string]any) error {
 	return u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id).Updates(user).Error
 }
-func (u *UserRepo) UpdateAttr(ctx context.Context, id int64, column string, pathArr []string, val any) error {
+func (u *UserRepo) UpdateAttr(ctx context.Context, id int64, column string, objectPath []string, val any) error {
 	return u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id).Transaction(func(db *gorm.DB) error {
-		if err := BuildPostgresJsonbMissObject(db, column, pathArr); err != nil {
+		if err := BuildPostgresJsonbMissObject(db, column, objectPath); err != nil {
 			return err
 		}
-		path := JoinPostgresJsonbPath(pathArr)
+		path := JoinPostgresJsonbPath(objectPath)
 		return db.Update("attr", datatypes.JSONSet(column).Set(path, val)).Error
 	})
 }
 
 // 构建jsonb缺失的中间路径(不会覆盖原有路径)，注意传入的dbWithModelAndWhere 必须是db.Model(表结构).WithContext(ctx).Where(条件)这样的
-func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, targetColumn string, pathArr []string) error {
-	lenPath := len(pathArr)
+func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, targetColumn string, objectPath []string) error {
+	lenPath := len(objectPath)
 	//只有一层就不需要
 	if lenPath <= 1 {
 		return nil
 	}
 	for i := 0; i < lenPath-1; i++ {
 		//截取的路径
-		cutPath := pathArr[:i+1]
+		cutPath := objectPath[:i+1]
 		checkPath, err := joinPostgresJsonbPathChain(targetColumn, cutPath)
 		if err != nil {
 			return err
@@ -71,7 +71,7 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, targetColumn str
 			continue
 		}
 		//截止到这里断了，一次性创建除最后一个节点的对象
-		missObj := buildAllMissPath(pathArr, i+1)
+		missObj := buildAllMissPath(objectPath, i+1)
 		path := JoinPostgresJsonbPath(cutPath)
 		//创建空对象
 		err = dbWithModelAndWhere.Update(targetColumn, gorm.Expr("JSONB_SET("+targetColumn+",?,?,?)", path, missObj, true)).Error
@@ -85,22 +85,22 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, targetColumn str
 }
 
 // jsonb路径{a,b,c}
-func JoinPostgresJsonbPath(pathArr []string) string {
-	return "{" + strings.Join(pathArr, ",") + "}"
+func JoinPostgresJsonbPath(objectPath []string) string {
+	return "{" + strings.Join(objectPath, ",") + "}"
 }
 
 // 连接jsonb路径链路 targetColumn->a->>b
-func joinPostgresJsonbPathChain(column string, pathArr []string) (string, error) {
-	lenPath := len(pathArr)
+func joinPostgresJsonbPathChain(column string, objectPath []string) (string, error) {
+	lenPath := len(objectPath)
 	if lenPath == 0 {
 		return "", errors.New("jsonb path is empty")
 	}
 	if lenPath == 1 {
-		return column + "->>'" + pathArr[0] + "'", nil
+		return column + "->>'" + objectPath[0] + "'", nil
 	}
 	pathBuilder := strings.Builder{}
 	pathBuilder.WriteString(column)
-	for k, v := range pathArr {
+	for k, v := range objectPath {
 		if k < lenPath-1 {
 			pathBuilder.WriteString("->")
 		} else {
@@ -114,16 +114,16 @@ func joinPostgresJsonbPathChain(column string, pathArr []string) (string, error)
 }
 
 // 构建自缺失的所有路径
-func buildAllMissPath(pathArr []string, beginIndex int) string {
-	if beginIndex >= len(pathArr)-1 {
+func buildAllMissPath(objectPath []string, beginIndex int) string {
+	if beginIndex >= len(objectPath)-1 {
 		return "{}"
 	}
 	newObj := strings.Builder{}
 	newObj.WriteString("{")
 	newObj.WriteString("\"")
-	newObj.WriteString(pathArr[beginIndex])
+	newObj.WriteString(objectPath[beginIndex])
 	newObj.WriteString("\":")
-	newObj.WriteString(buildAllMissPath(pathArr, beginIndex+1))
+	newObj.WriteString(buildAllMissPath(objectPath, beginIndex+1))
 	newObj.WriteString("}")
 	return newObj.String()
 }
