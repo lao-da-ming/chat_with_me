@@ -32,7 +32,7 @@ func (u *UserRepo) UpdateAttr(ctx context.Context, id int64, column string, path
 		return err
 	}
 	path := JoinPostgresJsonbPathToObj(pathArr)
-	return u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id).Update("attr", datatypes.JSONSet(column).Set(path, val)).Error
+	return dbWithModelAndWhere.Update("attr", datatypes.JSONSet(column).Set(path, val)).Error
 }
 
 // 构建jsonb缺失的中间路径(不会覆盖原有路径)，注意传入的dbWithModelAndWhere 必须是db.Model(表结构).WithContext(ctx).Where(条件)这样的
