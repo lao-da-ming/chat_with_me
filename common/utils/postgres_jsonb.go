@@ -38,7 +38,7 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string,
 			}
 			//值不为空且非对象
 			if string(checkResult.String[0]) != "{" || string(checkResult.String[len(checkResult.String)-1]) != "}" {
-				return errors.New("the path is not an object，path=" + checkPath)
+				return errors.New("the path value is not an object，path=" + checkPath)
 			}
 			//是对象就跳过下一层
 			continue
