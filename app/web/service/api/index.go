@@ -71,10 +71,12 @@ func (h *IndexController) UpdateAttr(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "msg": err.Error()})
 		return
 	}
-	err = h.userRepo.UpdateAttr(c, id, "profile,info", map[string]any{
-		"name": "厉害",
-		"age":  60,
-	})
+	err = h.userRepo.UpdateAttr(c, id, "attr",
+		[]string{"profile", "info", "attr"},
+		map[string]any{
+			"name": "厉害",
+			"age":  60,
+		})
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"code": http.StatusOK, "msg": err.Error()})
 		return
