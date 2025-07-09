@@ -32,7 +32,7 @@ func (u *UserRepo) UpdateAttr(ctx context.Context, id int64, column string, path
 		return err
 	}
 	path := JoinJsonbPathToObj(pathArr)
-	return u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id).Update("attr", datatypes.JSONSet("attr").Set(path, val)).Error
+	return u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id).Update("attr", datatypes.JSONSet(column).Set(path, val)).Error
 }
 
 func BuildJsonbMissPath(ctx context.Context, dbWithModelAndWhere *gorm.DB, targetColumn string, pathArr []string) error {
@@ -57,14 +57,18 @@ func BuildJsonbMissPath(ctx context.Context, dbWithModelAndWhere *gorm.DB, targe
 				}
 				return errors.New("failed to find record,err=" + err.Error())
 			}
-			if checkResult.Valid && checkResult.String == "" {
-				return errors.New("the path value is a empty string,path=" + checkPath)
-			}
-			if checkResult.Valid && checkResult.String != "" {
-				if string(checkResult.String[0]) != "{" || string(checkResult.String[len(checkResult.String)-1]) != "}" {
-					return errors.New("the path is not an object，path=" + checkPath)
+			if checkResult.Valid {
+				switch checkResult.String {
+				case "": //空字符串，非对象
+					return errors.New("the path value is not an object but string,path=" + checkPath)
+				default:
+					//非对象
+					if string(checkResult.String[0]) != "{" || string(checkResult.String[len(checkResult.String)-1]) != "}" {
+						return errors.New("the path is not an object，path=" + checkPath)
+					}
+					//是对象就跳过下一层
+					continue
 				}
-				continue
 			}
 			path := JoinJsonbPathToObj(cutPath)
 			//创建空对象
