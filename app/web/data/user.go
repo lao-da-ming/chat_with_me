@@ -26,7 +26,6 @@ func (u *UserRepo) Update(ctx context.Context, id int64, user map[string]any) er
 	return u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id).Updates(user).Error
 }
 func (u *UserRepo) UpdateAttr(ctx context.Context, id int64, column string, pathArr []string, val any) error {
-	//检查路径并构建完整路径
 	return u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id).Transaction(func(db *gorm.DB) error {
 		if err := BuildPostgresJsonbMissObject(db, column, pathArr); err != nil {
 			return err
@@ -34,7 +33,6 @@ func (u *UserRepo) UpdateAttr(ctx context.Context, id int64, column string, path
 		path := JoinPostgresJsonbPath(pathArr)
 		return db.Update("attr", datatypes.JSONSet(column).Set(path, val)).Error
 	})
-
 }
 
 // 构建jsonb缺失的中间路径(不会覆盖原有路径)，注意传入的dbWithModelAndWhere 必须是db.Model(表结构).WithContext(ctx).Where(条件)这样的
