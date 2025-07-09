@@ -57,18 +57,18 @@ func BuildJsonbMissPath(ctx context.Context, dbWithModelAndWhere *gorm.DB, targe
 				}
 				return errors.New("failed to find record,err=" + err.Error())
 			}
+			//存在字段
 			if checkResult.Valid {
-				switch checkResult.String {
-				case "": //空字符串，非对象
+				//值为空字符串
+				if checkResult.String == "" {
 					return errors.New("the path value is not an object but string,path=" + checkPath)
-				default:
-					//非对象
-					if string(checkResult.String[0]) != "{" || string(checkResult.String[len(checkResult.String)-1]) != "}" {
-						return errors.New("the path is not an object，path=" + checkPath)
-					}
-					//是对象就跳过下一层
-					continue
 				}
+				//值不为空且非对象
+				if string(checkResult.String[0]) != "{" || string(checkResult.String[len(checkResult.String)-1]) != "}" {
+					return errors.New("the path is not an object，path=" + checkPath)
+				}
+				//是对象就跳过下一层
+				continue
 			}
 			path := JoinJsonbPathToObj(cutPath)
 			//创建空对象
