@@ -31,7 +31,7 @@ func (u *UserRepo) UpdateAttr(ctx context.Context, id int64, column string, path
 	if err := BuildPostgresJsonbMissObject(dbWithModelAndWhere, column, pathArr); err != nil {
 		return err
 	}
-	path := JoinPostgresJsonbPathToObj(pathArr)
+	path := JoinPostgresJsonbPath(pathArr)
 	return dbWithModelAndWhere.Update("attr", datatypes.JSONSet(column).Set(path, val)).Error
 }
 
@@ -46,7 +46,7 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, targetColumn str
 		for i := 0; i < lenPath-1; i++ {
 			//截取的路径
 			cutPath := pathArr[:i+1]
-			checkPath, err := JoinPostgresJsonbPath(targetColumn, cutPath)
+			checkPath, err := JoinPostgresJsonbPathChain(targetColumn, cutPath)
 			if err != nil {
 				return err
 			}
@@ -71,7 +71,7 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, targetColumn str
 				//是对象就跳过下一层
 				continue
 			}
-			path := JoinPostgresJsonbPathToObj(cutPath)
+			path := JoinPostgresJsonbPath(cutPath)
 			//创建空对象
 			err = tx.Update(targetColumn, gorm.Expr("JSONB_SET("+targetColumn+",?,?,?)", path, "{}", true)).Error
 			if err != nil {
@@ -82,13 +82,13 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, targetColumn str
 	})
 }
 
-// jsonb路径连接成{a,b,c}
-func JoinPostgresJsonbPathToObj(pathArr []string) string {
+// jsonb路径{a,b,c}
+func JoinPostgresJsonbPath(pathArr []string) string {
 	return "{" + strings.Join(pathArr, ",") + "}"
 }
 
-// 连接jsonb路径 targetColumn->a->>b
-func JoinPostgresJsonbPath(column string, pathArr []string) (string, error) {
+// 连接jsonb路径链路 targetColumn->a->>b
+func JoinPostgresJsonbPathChain(column string, pathArr []string) (string, error) {
 	lenPath := len(pathArr)
 	if lenPath == 0 {
 		return "", errors.New("jsonb path is empty")
