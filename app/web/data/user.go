@@ -28,6 +28,6 @@ func (u *UserRepo) UpdateAttr(ctx context.Context, id int64, dbColumn string, ob
 			return err
 		}
 		path := utils.JoinPostgresJsonbPath(objectPath)
-		return db.Update("attr", datatypes.JSONSet(dbColumn).Set(path, val)).Error
+		return db.Update(dbColumn, datatypes.JSONSet(dbColumn).Set(path, val)).Error
 	})
 }
