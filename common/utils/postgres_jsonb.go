@@ -46,7 +46,7 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string,
 		//截止到这里断了，一次性创建除最后一个节点的对象
 		missObj := buildAllMissPath(objectPath, i+1)
 		path := JoinPostgresJsonbPath(cutPath)
-		//创建空对象
+		//创建对象
 		err = dbWithModelAndWhere.Update(dbColumn, gorm.Expr("JSONB_SET("+dbColumn+",?,?,?)", path, missObj, true)).Error
 		if err != nil {
 			return errors.New(fmt.Sprintf("创建中间路径失败，path=%s,err=%s", checkPath, err.Error()))
