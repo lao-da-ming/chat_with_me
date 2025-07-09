@@ -72,7 +72,7 @@ func (h *IndexController) UpdateAttr(c *gin.Context) {
 		return
 	}
 	err = h.userRepo.UpdateAttr(c, id, "attr",
-		[]string{"profile", "info", "attr"},
+		[]string{"profile", "info", "attr", "bt"},
 		map[string]any{
 			"name": "厉害",
 			"age":  60,
