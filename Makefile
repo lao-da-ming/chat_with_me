@@ -49,9 +49,9 @@ init:
 #panda table entity generator
 pgorm:# make pgorm or make pgorm table=users
 ifdef table
-	gen-gorm --sqltype=postgres --connstr "$(PgDbConnStr)" --database $(PgDbName) --model entity --json --gorm --overwrite --out ./common/model --table $(table)
+	./gen-gorm --sqltype=postgres --connstr "$(PgDbConnStr)" --database $(PgDbName) --model entity --json --gorm --overwrite --out ./common/model --table $(table)
 else
-	gen-gorm --sqltype=postgres --connstr "$(PgDbConnStr)" --database $(PgDbName) --model entity --json --gorm --overwrite --out ./common/model
+	./gen-gorm --sqltype=postgres --connstr "$(PgDbConnStr)" --database $(PgDbName) --model entity --json --gorm --overwrite --out ./common/model
 endif
 .PHONY: asset
 asset:
