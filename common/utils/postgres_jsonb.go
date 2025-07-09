@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 	"strings"
 )
@@ -47,7 +48,7 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string,
 		missObjVal := buildMissPathVal(objectPath, i+1)
 		path := JoinPostgresJsonbPath(cutPath)
 		//创建对象
-		err = dbWithModelAndWhere.Update(dbColumn, gorm.Expr("JSONB_SET("+dbColumn+",?,?,?)", path, missObjVal, true)).Error
+		err = dbWithModelAndWhere.Update(dbColumn, datatypes.JSONSet(dbColumn).Set(path, missObjVal)).Error
 		if err != nil {
 			return errors.New(fmt.Sprintf("创建中间路径失败，path=%s,err=%s", checkPath, err.Error()))
 		}
@@ -87,16 +88,11 @@ func joinPostgresJsonbPathChain(dbColumn string, objectPath []string) (string, e
 }
 
 // 构建自缺失的中间对象
-func buildMissPathVal(objectPath []string, beginIndex int) string {
+func buildMissPathVal(objectPath []string, beginIndex int) map[string]any {
 	if beginIndex >= len(objectPath)-1 {
-		return "{}"
+		return map[string]any{}
 	}
-	newObj := strings.Builder{}
-	newObj.WriteString("{")
-	newObj.WriteString("\"")
-	newObj.WriteString(objectPath[beginIndex])
-	newObj.WriteString("\":")
-	newObj.WriteString(buildMissPathVal(objectPath, beginIndex+1))
-	newObj.WriteString("}")
-	return newObj.String()
+	return map[string]any{
+		objectPath[beginIndex]: buildMissPathVal(objectPath, beginIndex+1),
+	}
 }
