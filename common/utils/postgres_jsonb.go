@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"gorm.io/datatypes"
@@ -12,63 +11,40 @@ import (
 // 构建jsonb缺失的中间路径(不会覆盖原有路径)，注意传入的dbWithModelAndWhere 必须是db.Model(表结构).WithContext(ctx).Where(条件)这样的
 func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string, objectPath []string) error {
 	lenPath := len(objectPath)
-	//只有一层就不需要
+	//只有一层或者空就不需要处理
 	if lenPath <= 1 {
 		return nil
 	}
-	for i := lenPath - 2; i >= 0; i-- {
-		//截取的路径
-		cutPath := objectPath[:i+1]
-		checkPath, err := joinPostgresJsonbPathChain(dbColumn, cutPath)
-		if err != nil {
-			return err
+	//检查前面的路径是否对象（除路径最后一个）
+	selectStr := buildGetJsonbPathTypeSelectStr(dbColumn, objectPath)
+	var checkResult string
+	if err := dbWithModelAndWhere.Select(selectStr + " as result").Scan(&checkResult).Error; err != nil {
+		return err
+	}
+	pathAttrTypes := strings.Split(checkResult, ",")
+	for index, attrType := range pathAttrTypes {
+		tipPath := strings.Join(objectPath[:index+1], ",")
+		switch attrType {
+		case "string": //字符串
+			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but string}", tipPath))
+		case "number": //数值
+			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but number}", tipPath))
+		case "boolean": //布尔
+			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but boolean}", tipPath))
+		case "object": //对象
+			continue
+		case "null": //不存在字段
+			missObjVal := buildMissPathVal(objectPath, index+1)
+			missPath := JoinPostgresJsonbPath(objectPath[:index+1])
+			//创建对象
+			err := dbWithModelAndWhere.Update(dbColumn, datatypes.JSONSet(dbColumn).Set(missPath, missObjVal)).Error
+			if err != nil {
+				return errors.New(fmt.Sprintf("创建中间路径失败，path:{%s},err=%s", missPath, err.Error()))
+			}
+			return nil
+		case "array": //数组
+			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but array}", tipPath))
 		}
-		var checkResult sql.NullString
-		err = dbWithModelAndWhere.Select(checkPath + " as val").Scan(&checkResult).Error
-		if err != nil {
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return errors.New("record not found")
-			}
-			return errors.New("failed to find record,err=" + err.Error())
-		}
-		var (
-			missObjVal map[string]any
-			missPath   string
-		)
-		//存在字段
-		if checkResult.Valid {
-			//值为空字符串
-			if checkResult.String == "" {
-				return errors.New("the path value is not an object,path=" + checkPath)
-			}
-			//值不为空且非对象
-			if string(checkResult.String[0]) != "{" || string(checkResult.String[len(checkResult.String)-1]) != "}" {
-				return errors.New("the path value is not an object，path=" + checkPath)
-			}
-			//是对象
-			//倒数第二路径直接是对象就不用继续探查
-			if i == lenPath-2 {
-				return nil
-			}
-			//否则创建所有中间对象（除最后节点）
-			missObjVal = buildMissPathVal(objectPath, i+2)
-			missPath = JoinPostgresJsonbPath(objectPath[:i+2])
-		} else { //不存在字段
-			//如果不是到根部都不存在则跳过
-			if i != 0 {
-				continue
-			}
-			//到了根部一次性创建所有中间对象（除最后节点）
-			missObjVal = buildMissPathVal(objectPath, i+1)
-			missPath = JoinPostgresJsonbPath(cutPath)
-		}
-		//创建对象
-		err = dbWithModelAndWhere.Update(dbColumn, datatypes.JSONSet(dbColumn).Set(missPath, missObjVal)).Error
-		if err != nil {
-			return errors.New(fmt.Sprintf("创建中间路径失败，path=%s,err=%s", checkPath, err.Error()))
-		}
-		//结束循环
-		break
 	}
 	return nil
 }
@@ -79,27 +55,23 @@ func JoinPostgresJsonbPath(objectPath []string) string {
 }
 
 // 连接jsonb路径链路 targetColumn->a->>b
-func joinPostgresJsonbPathChain(dbColumn string, objectPath []string) (string, error) {
+func joinPostgresJsonbPathChain(dbColumn string, objectPath []string) string {
 	lenPath := len(objectPath)
 	if lenPath == 0 {
-		return "", errors.New("jsonb path is empty")
+		return ""
 	}
 	if lenPath == 1 {
-		return dbColumn + "->>'" + objectPath[0] + "'", nil
+		return dbColumn + "->'" + objectPath[0] + "'"
 	}
 	pathBuilder := strings.Builder{}
 	pathBuilder.WriteString(dbColumn)
-	for k, v := range objectPath {
-		if k < lenPath-1 {
-			pathBuilder.WriteString("->")
-		} else {
-			pathBuilder.WriteString("->>")
-		}
+	for _, v := range objectPath {
+		pathBuilder.WriteString("->")
 		pathBuilder.WriteString("'")
 		pathBuilder.WriteString(v)
 		pathBuilder.WriteString("'")
 	}
-	return pathBuilder.String(), nil
+	return pathBuilder.String()
 }
 
 // 构建自缺失的中间对象
@@ -110,4 +82,20 @@ func buildMissPathVal(objectPath []string, beginIndex int) map[string]any {
 	return map[string]any{
 		objectPath[beginIndex]: buildMissPathVal(objectPath, beginIndex+1),
 	}
+}
+
+// 构建检查路径用的select的值
+func buildGetJsonbPathTypeSelectStr(dbColumn string, objectPath []string) string {
+	lenPath := len(objectPath)
+	//检查前面的路径是否对象（除路径最后一个）
+	selectStr := strings.Builder{}
+	for i := 0; i < lenPath-1; i++ {
+		selectStr.WriteString("COALESCE(jsonb_typeof(")
+		selectStr.WriteString(joinPostgresJsonbPathChain(dbColumn, objectPath[:i+1]))
+		selectStr.WriteString(")::TEXT,'null')")
+		if i < lenPath-2 {
+			selectStr.WriteString(" || ',' || ")
+		}
+	}
+	return selectStr.String()
 }
