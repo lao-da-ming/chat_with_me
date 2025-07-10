@@ -16,7 +16,7 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string,
 	if lenPath <= 1 {
 		return nil
 	}
-	for i := 0; i < lenPath-1; i++ {
+	for i := lenPath - 2; i >= 0; i-- {
 		//截取的路径
 		cutPath := objectPath[:i+1]
 		checkPath, err := joinPostgresJsonbPathChain(dbColumn, cutPath)
@@ -31,6 +31,10 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string,
 			}
 			return errors.New("failed to find record,err=" + err.Error())
 		}
+		var (
+			missObjVal map[string]any
+			missPath   string
+		)
 		//存在字段
 		if checkResult.Valid {
 			//值为空字符串
@@ -41,14 +45,25 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string,
 			if string(checkResult.String[0]) != "{" || string(checkResult.String[len(checkResult.String)-1]) != "}" {
 				return errors.New("the path value is not an object，path=" + checkPath)
 			}
-			//是对象就跳过下一层
-			continue
+			//是对象
+			//倒数第二路径直接是对象就不用继续探查
+			if i == lenPath-2 {
+				return nil
+			}
+			//否则创建所有中间对象（除最后节点）
+			missObjVal = buildMissPathVal(objectPath, i+2)
+			missPath = JoinPostgresJsonbPath(objectPath[:i+2])
+		} else { //不存在字段
+			//如果不是到根部都不存在则跳过
+			if i != 0 {
+				continue
+			}
+			//到了根部一次性创建所有中间对象（除最后节点）
+			missObjVal = buildMissPathVal(objectPath, i+1)
+			missPath = JoinPostgresJsonbPath(cutPath)
 		}
-		//截止到这里断了，一次性创建除最后一个节点的对象
-		missObjVal := buildMissPathVal(objectPath, i+1)
-		path := JoinPostgresJsonbPath(cutPath)
 		//创建对象
-		err = dbWithModelAndWhere.Update(dbColumn, datatypes.JSONSet(dbColumn).Set(path, missObjVal)).Error
+		err = dbWithModelAndWhere.Update(dbColumn, datatypes.JSONSet(dbColumn).Set(missPath, missObjVal)).Error
 		if err != nil {
 			return errors.New(fmt.Sprintf("创建中间路径失败，path=%s,err=%s", checkPath, err.Error()))
 		}

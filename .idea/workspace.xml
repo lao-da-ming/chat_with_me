@@ -5,10 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d574949b-a2d2-4fa1-9755-338bea6b4046" name="更改" comment="1">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/chat_with_me.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/chat_with_me.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/git_toolbox_prj.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/common/utils/postgres_jsonb.go" beforeDir="false" afterPath="$PROJECT_DIR$/common/utils/postgres_jsonb.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
