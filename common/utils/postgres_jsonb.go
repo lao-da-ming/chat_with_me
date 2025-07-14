@@ -10,11 +10,11 @@ import (
 
 /*
 用例：
-	db := u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id)
+	db := return utils.SetPgJsonbValue(u.WithContext(ctx), &entity.User{}, id, dbColumn, objectPath, val)
 	utils.SetPgJsonbValue(db, dbColumn, objectPath, val)
 */
 // 设置postgres jsonb属性
-func SetPgJsonbValue(dbWithCtx *gorm.DB, model any, rowId int64, dbColumn string, objectPath []string, value any) error {
+func SetPgJsonbValue(db *gorm.DB, model any, rowId int64, dbColumn string, objectPath []string, value any) error {
 	lenPath := len(objectPath)
 	//空就不需要处理
 	if lenPath == 0 {
@@ -22,16 +22,17 @@ func SetPgJsonbValue(dbWithCtx *gorm.DB, model any, rowId int64, dbColumn string
 	}
 	//只有一层直接赋值
 	if lenPath == 1 {
-		err := dbWithCtx.Model(model).Where("id = ?", rowId).Update(dbColumn, datatypes.JSONSet(dbColumn).Set(joinPostgresJsonbPath(objectPath), value)).Error
+		missPath := joinPostgresJsonbPath(objectPath)
+		err := setValue(db, model, rowId, dbColumn, missPath, value)
 		if err != nil {
-			return errors.New(fmt.Sprintf("failed to set jsonb value，path:{%s},err=%s", objectPath[0], err.Error()))
+			return errors.New(fmt.Sprintf("set jsonb err，path:{%s},err=%s", missPath, err.Error()))
 		}
 		return nil
 	}
 	//检查前面的路径是否对象
 	selectStr := buildGetJsonbPathTypeSelectStr(dbColumn, objectPath)
 	var checkResult string
-	if err := dbWithCtx.Model(model).Where("id = ?", rowId).Select(selectStr + " as result").Scan(&checkResult).Error; err != nil {
+	if err := db.Model(model).Where("id = ?", rowId).Select(selectStr + " as result").Scan(&checkResult).Error; err != nil {
 		return err
 	}
 	pathAttrTypes := strings.Split(checkResult, ",")
@@ -40,7 +41,7 @@ func SetPgJsonbValue(dbWithCtx *gorm.DB, model any, rowId int64, dbColumn string
 		if index == lenPath-1 {
 			missObjVal := buildMissPathVal(objectPath, lenPath, value)
 			missPath := joinPostgresJsonbPath(objectPath)
-			err := dbWithCtx.Model(model).Where("id = ?", rowId).Update(dbColumn, datatypes.JSONSet(dbColumn).Set(missPath, missObjVal)).Error
+			err := setValue(db, model, rowId, dbColumn, missPath, missObjVal)
 			if err != nil {
 				return errors.New(fmt.Sprintf("set jsonb err，path:{%s},err=%s", missPath, err.Error()))
 			}
@@ -60,8 +61,7 @@ func SetPgJsonbValue(dbWithCtx *gorm.DB, model any, rowId int64, dbColumn string
 		case "null": //不存在字段
 			missObjVal := buildMissPathVal(objectPath, index+1, value)
 			missPath := joinPostgresJsonbPath(cutPath)
-			//设置
-			err := dbWithCtx.Model(model).Where("id = ?", rowId).Update(dbColumn, datatypes.JSONSet(dbColumn).Set(missPath, missObjVal)).Error
+			err := setValue(db, model, rowId, dbColumn, missPath, missObjVal)
 			if err != nil {
 				return errors.New(fmt.Sprintf("set jsonb err，path:{%s},err=%s", missPath, err.Error()))
 			}
@@ -71,6 +71,11 @@ func SetPgJsonbValue(dbWithCtx *gorm.DB, model any, rowId int64, dbColumn string
 		}
 	}
 	return nil
+}
+
+// 设置
+func setValue(db *gorm.DB, model any, rowId int64, dbColumn string, missPath string, missObjVal any) error {
+	return db.Model(model).Where("id = ?", rowId).Update(dbColumn, datatypes.JSONSet(dbColumn).Set(missPath, missObjVal)).Error
 }
 
 // jsonb路径{a,b,c}
