@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// 构建jsonb缺失的中间路径(不会覆盖原有路径)，注意传入的dbWithModelAndWhere 必须是db.Model(表结构).WithContext(ctx).Where(条件)这样的
+// 构建jsonb缺失的中间路径(不会覆盖原有路径)，注意传入的dbWithModelAndWhere 必须是org.WithContext(ctx).Model(表结构).Where(条件)这样的
 func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string, objectPath []string) error {
 	lenPath := len(objectPath)
 	//只有一层或者空就不需要处理
@@ -23,19 +23,20 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string,
 	}
 	pathAttrTypes := strings.Split(checkResult, ",")
 	for index, attrType := range pathAttrTypes {
-		tipPath := strings.Join(objectPath[:index+1], ",")
+		cutPath := objectPath[:index+1]
+		tipPath := strings.Join(cutPath, "->")
 		switch attrType {
 		case "string": //字符串
-			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but string}", tipPath))
+			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but %s}", tipPath, attrType))
 		case "number": //数值
-			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but number}", tipPath))
+			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but %s}", tipPath, attrType))
 		case "boolean": //布尔
-			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but boolean}", tipPath))
+			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but %s}", tipPath, attrType))
 		case "object": //对象
 			continue
 		case "null": //不存在字段
 			missObjVal := buildMissPathVal(objectPath, index+1)
-			missPath := JoinPostgresJsonbPath(objectPath[:index+1])
+			missPath := JoinPostgresJsonbPath(cutPath)
 			//创建对象
 			err := dbWithModelAndWhere.Update(dbColumn, datatypes.JSONSet(dbColumn).Set(missPath, missObjVal)).Error
 			if err != nil {
@@ -43,7 +44,7 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string,
 			}
 			return nil
 		case "array": //数组
-			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but array}", tipPath))
+			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but %s}", tipPath, attrType))
 		}
 	}
 	return nil
@@ -54,7 +55,7 @@ func JoinPostgresJsonbPath(objectPath []string) string {
 	return "{" + strings.Join(objectPath, ",") + "}"
 }
 
-// 连接jsonb路径链路 targetColumn->a->>b
+// 连接jsonb路径链路 targetColumn->a->b
 func joinPostgresJsonbPathChain(dbColumn string, objectPath []string) string {
 	lenPath := len(objectPath)
 	if lenPath == 0 {
