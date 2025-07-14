@@ -22,7 +22,5 @@ func (u *UserRepo) Update(ctx context.Context, id int64, user map[string]any) er
 	return u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id).Updates(user).Error
 }
 func (u *UserRepo) UpdateAttr(ctx context.Context, id int64, dbColumn string, objectPath []string, val any) error {
-	return u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id).Transaction(func(db *gorm.DB) error {
-		return utils.SetPgJsonbValue(db, dbColumn, objectPath, val)
-	})
+	return utils.SetPgJsonbValue(u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id), dbColumn, objectPath, val)
 }
