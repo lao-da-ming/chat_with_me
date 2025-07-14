@@ -24,7 +24,7 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string,
 	pathAttrTypes := strings.Split(checkResult, ",")
 	for index, attrType := range pathAttrTypes {
 		cutPath := objectPath[:index+1]
-		tipPath := strings.Join(cutPath, "->")
+		tipPath := strings.Join(cutPath, ".")
 		switch attrType {
 		case "string": //字符串
 			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but %s}", tipPath, attrType))
