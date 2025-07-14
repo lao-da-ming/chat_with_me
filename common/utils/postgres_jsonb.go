@@ -8,11 +8,6 @@ import (
 	"strings"
 )
 
-/*
-用例：
-	db := return utils.SetPgJsonbValue(u.WithContext(ctx), &entity.User{}, id, dbColumn, objectPath, val)
-	utils.SetPgJsonbValue(db, dbColumn, objectPath, val)
-*/
 // 设置postgres jsonb属性
 func SetPgJsonbValue(db *gorm.DB, model any, rowId int64, dbColumn string, objectPath []string, value any) error {
 	lenPath := len(objectPath)
