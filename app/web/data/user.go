@@ -4,7 +4,6 @@ import (
 	"chat_with_me/common/model/entity"
 	"chat_with_me/common/utils"
 	"context"
-	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -24,10 +23,6 @@ func (u *UserRepo) Update(ctx context.Context, id int64, user map[string]any) er
 }
 func (u *UserRepo) UpdateAttr(ctx context.Context, id int64, dbColumn string, objectPath []string, val any) error {
 	return u.db.Model(&entity.User{}).WithContext(ctx).Where("id = ?", id).Transaction(func(db *gorm.DB) error {
-		if err := utils.BuildPostgresJsonbMissObject(db, dbColumn, objectPath); err != nil {
-			return err
-		}
-		path := utils.JoinPostgresJsonbPath(objectPath)
-		return db.Update(dbColumn, datatypes.JSONSet(dbColumn).Set(path, val)).Error
+		return utils.SetPgJsonbValue(db, dbColumn, objectPath, val)
 	})
 }

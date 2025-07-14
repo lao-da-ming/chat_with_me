@@ -8,21 +8,39 @@ import (
 	"strings"
 )
 
-// 构建jsonb缺失的中间路径(不会覆盖原有路径)，注意传入的dbWithModelAndWhere 必须是org.WithContext(ctx).Model(表结构).Where(条件)这样的
-func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string, objectPath []string) error {
+// 构建jsonb缺失的中间路径(不会覆盖原有路径)，dbWithCtxModelWhere传类似org.WithContext(ctx).Model(&entity.User).Where(条件)
+func SetPgJsonbValue(dbWithCtxModelWhere *gorm.DB, dbColumn string, objectPath []string, value any) error {
 	lenPath := len(objectPath)
-	//只有一层或者空就不需要处理
-	if lenPath <= 1 {
+	//空就不需要处理
+	if lenPath == 0 {
 		return nil
 	}
-	//检查前面的路径是否对象（除路径最后一个）
+	//只有一层直接赋值
+	if lenPath == 1 {
+		err := dbWithCtxModelWhere.Update(dbColumn, datatypes.JSONSet(dbColumn).Set(joinPostgresJsonbPath(objectPath), value)).Error
+		if err != nil {
+			return errors.New(fmt.Sprintf("failed to set jsonb value，path:{%s},err=%s", objectPath[0], err.Error()))
+		}
+		return nil
+	}
+	//检查前面的路径是否对象
 	selectStr := buildGetJsonbPathTypeSelectStr(dbColumn, objectPath)
 	var checkResult string
-	if err := dbWithModelAndWhere.Select(selectStr + " as result").Scan(&checkResult).Error; err != nil {
+	if err := dbWithCtxModelWhere.Select(selectStr + " as result").Scan(&checkResult).Error; err != nil {
 		return err
 	}
 	pathAttrTypes := strings.Split(checkResult, ",")
 	for index, attrType := range pathAttrTypes {
+		//最后一个，直接赋值
+		if index == lenPath-1 {
+			missObjVal := buildMissPathVal(objectPath, lenPath, value)
+			missPath := joinPostgresJsonbPath(objectPath)
+			err := dbWithCtxModelWhere.Update(dbColumn, datatypes.JSONSet(dbColumn).Set(missPath, missObjVal)).Error
+			if err != nil {
+				return errors.New(fmt.Sprintf("set jsonb err，path:{%s},err=%s", missPath, err.Error()))
+			}
+			return nil
+		}
 		cutPath := objectPath[:index+1]
 		tipPath := strings.Join(cutPath, ".")
 		switch attrType {
@@ -35,23 +53,25 @@ func BuildPostgresJsonbMissObject(dbWithModelAndWhere *gorm.DB, dbColumn string,
 		case "object": //对象
 			continue
 		case "null": //不存在字段
-			missObjVal := buildMissPathVal(objectPath, index+1)
-			missPath := JoinPostgresJsonbPath(cutPath)
-			//创建对象
-			err := dbWithModelAndWhere.Update(dbColumn, datatypes.JSONSet(dbColumn).Set(missPath, missObjVal)).Error
+			missObjVal := buildMissPathVal(objectPath, index+1, value)
+			missPath := joinPostgresJsonbPath(cutPath)
+			//设置
+			err := dbWithCtxModelWhere.Update(dbColumn, datatypes.JSONSet(dbColumn).Set(missPath, missObjVal)).Error
 			if err != nil {
-				return errors.New(fmt.Sprintf("创建中间路径失败，path:{%s},err=%s", missPath, err.Error()))
+				return errors.New(fmt.Sprintf("set jsonb err，path:{%s},err=%s", missPath, err.Error()))
 			}
 			return nil
 		case "array": //数组
 			return errors.New(fmt.Sprintf("the attribute type of path:{%s} is not an object but %s}", tipPath, attrType))
+		default:
+			return nil
 		}
 	}
 	return nil
 }
 
 // jsonb路径{a,b,c}
-func JoinPostgresJsonbPath(objectPath []string) string {
+func joinPostgresJsonbPath(objectPath []string) string {
 	return "{" + strings.Join(objectPath, ",") + "}"
 }
 
@@ -76,25 +96,25 @@ func joinPostgresJsonbPathChain(dbColumn string, objectPath []string) string {
 }
 
 // 构建自缺失的中间对象
-func buildMissPathVal(objectPath []string, beginIndex int) map[string]any {
-	if beginIndex >= len(objectPath)-1 {
-		return map[string]any{}
+func buildMissPathVal(objectPath []string, beginIndex int, value any) any {
+	if beginIndex >= len(objectPath) {
+		return value
 	}
 	return map[string]any{
-		objectPath[beginIndex]: buildMissPathVal(objectPath, beginIndex+1),
+		objectPath[beginIndex]: buildMissPathVal(objectPath, beginIndex+1, value),
 	}
 }
 
 // 构建检查路径用的select的值
 func buildGetJsonbPathTypeSelectStr(dbColumn string, objectPath []string) string {
 	lenPath := len(objectPath)
-	//检查前面的路径是否对象（除路径最后一个）
+	//检查前面的路径是否对象
 	selectStr := strings.Builder{}
-	for i := 0; i < lenPath-1; i++ {
+	for i := 0; i < lenPath; i++ {
 		selectStr.WriteString("COALESCE(jsonb_typeof(")
 		selectStr.WriteString(joinPostgresJsonbPathChain(dbColumn, objectPath[:i+1]))
 		selectStr.WriteString(")::TEXT,'null')")
-		if i < lenPath-2 {
+		if i < lenPath-1 {
 			selectStr.WriteString(" || ',' || ")
 		}
 	}
