@@ -3,6 +3,7 @@ package api
 import (
 	"chat_with_me/app/web/data"
 	"chat_with_me/common/model/entity"
+	"chat_with_me/common/utils"
 	"database/sql"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -20,7 +21,27 @@ func NewIndexController(logger *zap.Logger, userRepo *data.UserRepo) *IndexContr
 	return &IndexController{logger: logger, userRepo: userRepo}
 }
 func (h *IndexController) Home(c *gin.Context) {
-	c.String(http.StatusOK, "Hello World!!")
+	tmpFileName := "custer_org_employee.xlsx"
+	var exportData [][]string
+	exportData = append(exportData, []string{"李云龙1", "语文", "80"})
+	exportData = append(exportData, []string{"李云龙", "数学", "95"})
+	exportData = append(exportData, []string{"李云龙", "英语", "100"})
+	exportData = append(exportData, []string{"李飞", "数学", "82"})
+	exportData = append(exportData, []string{"李飞", "英语", "96"})
+	exportData = append(exportData, []string{"湟源", "英语", "101"})
+	if err := utils.ExportExcel(&utils.ExcelExportConfig{
+		FileName:  tmpFileName,
+		SheetName: "sheet1",
+		Data:      exportData,
+		Headers:   []string{"姓名", "科目", "分数"},
+		MergeCells: []utils.MergeCell{
+			{"A4", "A2"},
+		},
+		ColWith: 20,
+	}); err != nil {
+		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": err.Error()})
+		return
+	}
 }
 
 func (h *IndexController) Create(c *gin.Context) {

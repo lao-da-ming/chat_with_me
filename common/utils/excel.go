@@ -7,13 +7,19 @@ import (
 
 // ExcelExportConfig 导出配置
 type ExcelExportConfig struct {
-	FileName    string     // 文件名
-	SheetName   string     // 工作表名
-	Headers     []string   // 表头
-	Data        [][]string // 数据内容
-	ColWith     float64    // 列宽（0表示自动列宽）
+	FileName    string      // 文件名
+	SheetName   string      // 工作表名
+	Headers     []string    // 表头
+	Data        [][]string  // 数据内容
+	ColWith     float64     // 列宽（0表示自动列宽）
+	MergeCells  []MergeCell //合并单元格设置
 	HeaderStyle *excelize.Style
 	DataStyle   *excelize.Style
+}
+type MergeCell struct {
+	//如想要合并A2~A7的单元格 BottomRightCell = A2  TopLeftCell = A7
+	TopLeftCell     string //合并截止单元格
+	BottomRightCell string //合并到目标的单元格(只保留这个单元格数据)
 }
 
 // ExportExcel 导出Excel主方法
@@ -69,7 +75,12 @@ func ExportExcel(cfg *ExcelExportConfig) error {
 			return err
 		}
 	}
-
+	// 处理合并单元格
+	for _, item := range cfg.MergeCells {
+		if err = f.MergeCell(cfg.SheetName, item.TopLeftCell, item.BottomRightCell); err != nil {
+			return err
+		}
+	}
 	// 设置整个数据区域样式（性能关键）
 	if len(cfg.Data) > 0 {
 		startDataCell, _ := excelize.CoordinatesToCellName(1, 2)
@@ -170,4 +181,13 @@ func defaultStyles() (*excelize.Style, *excelize.Style) {
 		},
 	}
 	return headerStyle, dataStyle
+}
+
+// 生成A-Z数组
+func GenerateAtoZ() []string {
+	letters := make([]string, 26)
+	for i := range letters {
+		letters[i] = string('A' + i)
+	}
+	return letters
 }

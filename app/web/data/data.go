@@ -10,6 +10,7 @@ import (
 var ProviderSet = wire.NewSet(NewData, NewUserRepo)
 
 func NewData() *gorm.DB {
+	return nil
 	db, err := gorm.Open(postgres.Open("postgres://postgres:123456@10.60.33.25:5432/postgres"), &gorm.Config{
 		PrepareStmt: true,
 	})
