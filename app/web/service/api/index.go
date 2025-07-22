@@ -36,6 +36,7 @@ func (h *IndexController) Home(c *gin.Context) {
 		Headers:   []string{"姓名", "科目", "分数"},
 		MergeCells: []utils.MergeCell{
 			{"A4", "A2"},
+			{"B3", "B2"},
 		},
 		ColWith: 20,
 	}); err != nil {
