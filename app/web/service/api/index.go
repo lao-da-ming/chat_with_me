@@ -23,7 +23,7 @@ func NewIndexController(logger *zap.Logger, userRepo *data.UserRepo) *IndexContr
 func (h *IndexController) Home(c *gin.Context) {
 	tmpFileName := "custer_org_employee.xlsx"
 	var exportData [][]string
-	exportData = append(exportData, []string{"李云龙1", "语文", "80"})
+	exportData = append(exportData, []string{"李云龙1", "语文", "81"})
 	exportData = append(exportData, []string{"李云龙", "数学", "95"})
 	exportData = append(exportData, []string{"李云龙", "英语", "100"})
 	exportData = append(exportData, []string{"李飞", "数学", "82"})
