@@ -235,7 +235,7 @@ func CheckRealHeader(fullHeaders []string, realHeaders []string) error {
 func GenerateAtoZ() []string {
 	letters := make([]string, 26)
 	for i := range letters {
-		letters[i] = fmt.Sprintf("%d", 'A'+i)
+		letters[i] = string('A' + i)
 	}
 	return letters
 }
