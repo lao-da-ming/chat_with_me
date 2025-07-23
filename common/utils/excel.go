@@ -1,11 +1,11 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"github.com/xuri/excelize/v2"
 )
 
-// ExcelExportConfig 导出配置
 type ExcelExportConfig struct {
 	FileName    string      // 文件名
 	SheetName   string      // 工作表名
@@ -24,8 +24,13 @@ type MergeCell struct {
 
 // ExportExcel 导出Excel主方法
 func ExportExcel(cfg *ExcelExportConfig) error {
+	if len(cfg.Headers) == 0 {
+		return errors.New("表头不能空")
+	}
 	f := excelize.NewFile()
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	// 创建工作表
 	index, err := f.NewSheet(cfg.SheetName)
@@ -45,28 +50,42 @@ func ExportExcel(cfg *ExcelExportConfig) error {
 	}
 
 	// 注册样式
-	headerStyleID, _ := f.NewStyle(cfg.HeaderStyle)
-	dataStyleID, _ := f.NewStyle(cfg.DataStyle)
-
+	headerStyleID, err := f.NewStyle(cfg.HeaderStyle)
+	if err != nil {
+		return err
+	}
+	dataStyleID, err := f.NewStyle(cfg.DataStyle)
+	if err != nil {
+		return err
+	}
 	// ==== 性能优化点1：批量写入表头 ====
 	headerCells := make([]interface{}, len(cfg.Headers))
 	for i, header := range cfg.Headers {
 		headerCells[i] = header
 	}
 	// 批量写入表头
-	startHeaderCell, _ := excelize.CoordinatesToCellName(1, 1)
+	startHeaderCell, err := excelize.CoordinatesToCellName(1, 1)
+	if err != nil {
+		return err
+	}
 	if err := f.SetSheetRow(cfg.SheetName, startHeaderCell, &headerCells); err != nil {
 		return err
 	}
 	// 设置整行表头样式
-	endHeaderCell, _ := excelize.CoordinatesToCellName(len(cfg.Headers), 1)
+	endHeaderCell, err := excelize.CoordinatesToCellName(len(cfg.Headers), 1)
+	if err != nil {
+		return err
+	}
 	if err := f.SetCellStyle(cfg.SheetName, startHeaderCell, endHeaderCell, headerStyleID); err != nil {
 		return err
 	}
-
 	// ==== 性能优化点2：批量写入数据 ====
+
 	for rowIdx, rowData := range cfg.Data {
-		startDataCell, _ := excelize.CoordinatesToCellName(1, rowIdx+2)
+		startDataCell, err := excelize.CoordinatesToCellName(1, rowIdx+2)
+		if err != nil {
+			return err
+		}
 		row := make([]interface{}, len(rowData))
 		for i, v := range rowData {
 			row[i] = v
@@ -75,7 +94,7 @@ func ExportExcel(cfg *ExcelExportConfig) error {
 			return err
 		}
 	}
-	// 处理合并单元格
+	//处理合并单元格
 	for _, item := range cfg.MergeCells {
 		if err = f.MergeCell(cfg.SheetName, item.TopLeftCell, item.BottomRightCell); err != nil {
 			return err
@@ -83,13 +102,18 @@ func ExportExcel(cfg *ExcelExportConfig) error {
 	}
 	// 设置整个数据区域样式（性能关键）
 	if len(cfg.Data) > 0 {
-		startDataCell, _ := excelize.CoordinatesToCellName(1, 2)
-		endDataCell, _ := excelize.CoordinatesToCellName(len(cfg.Headers), len(cfg.Data)+1)
-		if err := f.SetCellStyle(cfg.SheetName, startDataCell, endDataCell, dataStyleID); err != nil {
+		startDataCell, err := excelize.CoordinatesToCellName(1, 2)
+		if err != nil {
+			return err
+		}
+		endDataCell, err := excelize.CoordinatesToCellName(len(cfg.Headers), len(cfg.Data)+1)
+		if err != nil {
+			return err
+		}
+		if err = f.SetCellStyle(cfg.SheetName, startDataCell, endDataCell, dataStyleID); err != nil {
 			return err
 		}
 	}
-
 	// ==== 列宽设置优化 ====
 	if cfg.ColWith > 0 {
 		if err := setUniformColumnWidth(f, cfg.SheetName, len(cfg.Headers), cfg.ColWith); err != nil {
@@ -116,8 +140,11 @@ func setUniformColumnWidth(f *excelize.File, sheetName string, colCount int, wid
 		width = 8
 	}
 	for col := 1; col <= colCount; col++ {
-		colName, _ := excelize.ColumnNumberToName(col)
-		if err := f.SetColWidth(sheetName, colName, colName, width); err != nil {
+		colName, err := excelize.ColumnNumberToName(col)
+		if err != nil {
+			return err
+		}
+		if err = f.SetColWidth(sheetName, colName, colName, width); err != nil {
 			return err
 		}
 	}
@@ -153,10 +180,14 @@ func setAutoColumnWidth(f *excelize.File, sheetName string, headers []string, da
 		} else if width > 50 {
 			width = 50
 		}
-		colName, _ := excelize.ColumnNumberToName(colIdx + 1)
-		if err := f.SetColWidth(sheetName, colName, colName, width); err != nil {
+		colName, err := excelize.ColumnNumberToName(colIdx + 1)
+		if err != nil {
 			return err
 		}
+		if err = f.SetColWidth(sheetName, colName, colName, width); err != nil {
+			return err
+		}
+
 	}
 	return nil
 }
@@ -181,6 +212,23 @@ func defaultStyles() (*excelize.Style, *excelize.Style) {
 		},
 	}
 	return headerStyle, dataStyle
+}
+
+// 检查过滤的header
+func CheckRealHeader(fullHeaders []string, realHeaders []string) error {
+	if len(fullHeaders) == 0 || len(realHeaders) == 0 {
+		return errors.New("表头不能为空")
+	}
+	mapFullHeader := make(map[string]struct{})
+	for _, val := range fullHeaders {
+		mapFullHeader[val] = struct{}{}
+	}
+	for _, val := range realHeaders {
+		if _, ok := mapFullHeader[val]; !ok {
+			return errors.New("表头不匹配")
+		}
+	}
+	return nil
 }
 
 // 生成A-Z数组
