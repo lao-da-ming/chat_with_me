@@ -10,6 +10,7 @@ import (
 	"chat_with_me/app/web/app"
 	"chat_with_me/app/web/data"
 	"chat_with_me/app/web/log"
+	"chat_with_me/app/web/mqtt"
 	"chat_with_me/app/web/service/api"
 	"chat_with_me/app/web/service/ws"
 	"github.com/gin-gonic/gin"
@@ -22,7 +23,8 @@ func WireApp(engine *gin.Engine) *app.App {
 	logger := log.NewLogger()
 	db := data.NewData()
 	userRepo := data.NewUserRepo(db)
-	indexController := api.NewIndexController(logger, userRepo)
+	mqttClient := mqtt.NewMQTT()
+	indexController := api.NewIndexController(logger, userRepo, mqttClient)
 	wsController := ws.NewWsController(logger)
 	appApp := app.NewApp(engine, logger, indexController, wsController)
 	return appApp
