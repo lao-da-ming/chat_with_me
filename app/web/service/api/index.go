@@ -21,6 +21,9 @@ func NewIndexController(logger *zap.Logger, userRepo *data.UserRepo) *IndexContr
 	return &IndexController{logger: logger, userRepo: userRepo}
 }
 func (h *IndexController) Home(c *gin.Context) {
+
+}
+func (h *IndexController) Excel(c *gin.Context) {
 	tmpFileName := "custer_org_employee.xlsx"
 	var exportData [][]string
 	exportData = append(exportData, []string{"李云龙1", "语文", "81"})
@@ -43,8 +46,8 @@ func (h *IndexController) Home(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"code": 0, "msg": err.Error()})
 		return
 	}
+	c.JSON(http.StatusOK, gin.H{"code": 0, "msg": "ok"})
 }
-
 func (h *IndexController) Create(c *gin.Context) {
 	err := h.userRepo.Create(c, &entity.User{
 		ID: time.Now().UnixMicro(),
