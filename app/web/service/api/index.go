@@ -28,12 +28,16 @@ func (h *IndexController) Home(c *gin.Context) {
 	c.JSON(200, gin.H{})
 }
 func (h *IndexController) Mqtt(c *gin.Context) {
-	h.mqtt.Subscribe("/a/b/c", 1, func(client mqtt2.Client, message mqtt2.Message) {
+	topic := "/a/b/c"
+	_ = h.mqtt.Subscribe(topic, 1, func(client mqtt2.Client, message mqtt2.Message) {
 		fmt.Println("收到消息，topic:", message.Topic(), "消息:", string(message.Payload()), "QOS:", message.Qos())
 	})
+	defer func() {
+		_ = h.mqtt.UnSubscribe(topic)
+	}()
 	for i := 0; i < 10; i++ {
 		time.Sleep(1 * time.Second)
-		h.mqtt.Publish("/a/b/c", "哈哈哈", 1)
+		_ = h.mqtt.Publish("/a/b/c", "哈哈哈", 1)
 	}
 }
 func (h *IndexController) Excel(c *gin.Context) {

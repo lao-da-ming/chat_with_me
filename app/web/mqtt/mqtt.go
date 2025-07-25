@@ -85,3 +85,12 @@ func (m *MQTTClient) Subscribe(topic string, qos byte, handler mqtt.MessageHandl
 	log.Printf("已订阅主题: %s", topic)
 	return nil
 }
+
+// Subscribe 取消订阅主题
+func (m *MQTTClient) UnSubscribe(topic ...string) error {
+	if token := m.client.Unsubscribe(topic...); token.Wait() && token.Error() != nil {
+		return fmt.Errorf("取消订阅失败: %v", token.Error())
+	}
+	log.Printf("已取消订阅主题: %s", topic)
+	return nil
+}
